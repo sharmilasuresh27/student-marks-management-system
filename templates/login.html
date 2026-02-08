@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Login - School Management System</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        
+        .login-header {
+            margin-bottom: 30px;
+        }
+        
+        .login-title {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .class-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .class-option {
+            position: relative;
+        }
+        
+        .class-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .class-option label {
+            display: block;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .class-option input[type="radio"]:checked + label {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .class-option label:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .class-a label { border-color: #FF6B6B; }
+        .class-a input[type="radio"]:checked + label { background: #FF6B6B; border-color: #FF6B6B; }
+        
+        .class-b label { border-color: #4ECDC4; }
+        .class-b input[type="radio"]:checked + label { background: #4ECDC4; border-color: #4ECDC4; }
+        
+        .class-c label { border-color: #45B7D1; }
+        .class-c input[type="radio"]:checked + label { background: #45B7D1; border-color: #45B7D1; }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+        
+        .login-btn:hover {
+            background: linear-gradient(45deg, #764ba2, #667eea);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .demo-credentials {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .demo-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .demo-info {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 30px 20px;
+            }
+            
+            .class-selector {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1 class="login-title">🎓 School Management</h1>
+                <p class="login-subtitle">Teacher Portal Login</p>
+            </div>
+            
+            {% if error %}
+            <div class="alert">
+                ⚠️ {{ error }}
+            </div>
+            {% endif %}
+            
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Teacher Name</label>
+                    <input type="text" name="username" class="form-control" placeholder="Enter your name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Assigned Class</label>
+                    <div class="class-selector">
+                        <div class="class-option class-a">
+                            <input type="radio" name="class" value="A" id="class-a" required>
+                            <label for="class-a">Class A</label>
+                        </div>
+                        <div class="class-option class-b">
+                            <input type="radio" name="class" value="B" id="class-b" required>
+                            <label for="class-b">Class B</label>
+                        </div>
+                        <div class="class-option class-c">
+                            <input type="radio" name="class" value="C" id="class-c" required>
+                            <label for="class-c">Class C</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="login-btn">Login to Dashboard</button>
+            </form>
+            
+            <div class="demo-credentials">
+                <div class="demo-title">📋 Demo Credentials</div>
+                <div class="demo-info">
+                    <strong>Class A:</strong> Mrs. Priya Sharma / priya123<br>
+                    <strong>Class B:</strong> Mr. Rajesh Kumar / rajesh123<br>
+                    <strong>Class C:</strong> Ms. Ananya Patel / ananya123
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

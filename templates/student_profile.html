@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profile - {{ student.name }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Student Profile Header -->
+        <div class="card class-{{ student['class'].lower() }}">
+            <div class="card-header">
+                <h1 class="card-title">👤 {{ student['name'] }} - Student Profile</h1>
+                <span class="badge badge-info">{{ student['student_id'] }}</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; padding: 20px;">
+                <div>
+                    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white;">
+                            {{ student['name'][0]|upper if student['name'] else 'S' }}
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #333;">{{ student['name'] }}</h3>
+                            <p style="margin: 5px 0; color: #666;">{{ student['student_id'] }}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #667eea;">📚 Academic Information</h4>
+                        <p style="margin: 5px 0;"><strong>Class:</strong> {{ student['class'] }}</p>
+                        <p style="margin: 5px 0;"><strong>Class Teacher:</strong> {{ student['class_teacher'] }}</p>
+                        <p style="margin: 5px 0;"><strong>Created:</strong> {{ student['created_at'] }}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="text-align: center; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                        <h3 style="margin: 0 0 15px 0; color: #333;">📊 Performance Summary</h3>
+                        <div style="font-size: 48px; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                            {{ student['total'] }}
+                        </div>
+                        <div style="font-size: 24px; color: #666; margin-bottom: 5px;">
+                            Total Marks
+                        </div>
+                        <div style="font-size: 20px; color: #00b894; margin-bottom: 5px;">
+                            {{ "%.1f"|format(student['average']) }} Average
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <span class="grade-{{ student['grade'].lower().replace('+', '-plus') }}" style="font-size: 24px; font-weight: bold;">
+                                {{ student['grade'] }}
+                            </span>
+                            <span class="badge badge-{{ 'success' if student['status'] == 'PASS' else 'danger' }}" style="margin-left: 10px; font-size: 16px;">
+                                {{ student['status'] }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subject Performance Details -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📚 Subject Performance Details</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 20px;">
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #FF6B6B;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📚</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #FF6B6B;">{{ student['tamil'] }}</div>
+                    <div style="color: #666; font-size: 14px;">Tamil</div>
+                    {% if student['tamil'] >= 90 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-success">Excellent</span></div>
+                    {% elif student['tamil'] >= 75 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-info">Good</span></div>
+                    {% elif student['tamil'] >= 50 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-warning">Average</span></div>
+                    {% else %}
+                        <div style="margin-top: 10px;"><span class="badge badge-danger">Needs Improvement</span></div>
+                    {% endif %}
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #4ECDC4;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📖</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #4ECDC4;">{{ student['english'] }}</div>
+                    <div style="color: #666; font-size: 14px;">English</div>
+                    {% if student['english'] >= 90 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-success">Excellent</span></div>
+                    {% elif student['english'] >= 75 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-info">Good</span></div>
+                    {% elif student['english'] >= 50 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-warning">Average</span></div>
+                    {% else %}
+                        <div style="margin-top: 10px;"><span class="badge badge-danger">Needs Improvement</span></div>
+                    {% endif %}
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #45B7D1;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">🔢</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #45B7D1;">{{ student['maths'] }}</div>
+                    <div style="color: #666; font-size: 14px;">Mathematics</div>
+                    {% if student['maths'] >= 90 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-success">Excellent</span></div>
+                    {% elif student['maths'] >= 75 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-info">Good</span></div>
+                    {% elif student['maths'] >= 50 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-warning">Average</span></div>
+                    {% else %}
+                        <div style="margin-top: 10px;"><span class="badge badge-danger">Needs Improvement</span></div>
+                    {% endif %}
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #fdcb6e;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">🔬</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #fdcb6e;">{{ student['science'] }}</div>
+                    <div style="color: #666; font-size: 14px;">Science</div>
+                    {% if student['science'] >= 90 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-success">Excellent</span></div>
+                    {% elif student['science'] >= 75 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-info">Good</span></div>
+                    {% elif student['science'] >= 50 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-warning">Average</span></div>
+                    {% else %}
+                        <div style="margin-top: 10px;"><span class="badge badge-danger">Needs Improvement</span></div>
+                    {% endif %}
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #e17055;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">🌍</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #e17055;">{{ student['social'] }}</div>
+                    <div style="color: #666; font-size: 14px;">Social Science</div>
+                    {% if student['social'] >= 90 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-success">Excellent</span></div>
+                    {% elif student['social'] >= 75 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-info">Good</span></div>
+                    {% elif student['social'] >= 50 %}
+                        <div style="margin-top: 10px;"><span class="badge badge-warning">Average</span></div>
+                    {% else %}
+                        <div style="margin-top: 10px;"><span class="badge badge-danger">Needs Improvement</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Analysis -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Performance Analysis</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <h3 style="color: #333; margin-bottom: 15px;">📊 Strengths</h3>
+                        <ul style="color: #666; line-height: 1.8;">
+                            {% if student['tamil'] >= 75 %}<li>Strong Tamil performance</li>{% endif %}
+                            {% if student['english'] >= 75 %}<li>Good English skills</li>{% endif %}
+                            {% if student['maths'] >= 75 %}<li>Excellent Mathematics</li>{% endif %}
+                            {% if student['science'] >= 75 %}<li>Strong Science knowledge</li>{% endif %}
+                            {% if student['social'] >= 75 %}<li>Good Social understanding</li>{% endif %}
+                            {% if student['status'] == 'PASS' %}<li>Consistent academic performance</li>{% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #333; margin-bottom: 15px;">🎯 Areas for Improvement</h3>
+                        <ul style="color: #666; line-height: 1.8;">
+                            {% if student['tamil'] < 50 %}<li>Tamil needs more attention</li>{% endif %}
+                            {% if student['english'] < 50 %}<li>English requires improvement</li>{% endif %}
+                            {% if student['maths'] < 50 %}<li>Mathematics needs focus</li>{% endif %}
+                            {% if student['science'] < 50 %}<li>Science needs improvement</li>{% endif %}
+                            {% if student['social'] < 50 %}<li>Social studies need attention</li>{% endif %}
+                            {% if student['status'] == 'FAIL' %}<li>Overall academic performance needs improvement</li>{% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 10px; border-left: 4px solid #667eea;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">💡 Recommendations</h4>
+                    <ul style="color: #666; line-height: 1.8;">
+                        {% if student['status'] == 'FAIL' %}
+                            <li>Focus on subjects with scores below 35</li>
+                            <li>Consider additional tutoring sessions</li>
+                            <li>Practice with previous exam papers</li>
+                        {% else %}
+                            <li>Maintain current performance level</li>
+                            <li>Participate in academic competitions</li>
+                            <li>Consider advanced study materials</li>
+                        {% endif %}
+                        <li>Regular practice and revision</li>
+                        <li>Seek help from teachers when needed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚡ Actions</h2>
+            </div>
+            <div style="padding: 20px;">
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <a href="/edit/{{ student['id'] }}" class="btn btn-warning">
+                        ✏️ Edit Student
+                    </a>
+                    <a href="/" class="btn btn-primary">
+                        👥 Back to Class
+                    </a>
+                    <a href="/export-pdf" class="btn btn-success">
+                        📄 Download Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .class-a { border-left: 6px solid #FF6B6B; }
+        .class-a .card-title { color: #FF6B6B; }
+        
+        .class-b { border-left: 6px solid #4ECDC4; }
+        .class-b .card-title { color: #4ECDC4; }
+        
+        .class-c { border-left: 6px solid #45B7D1; }
+        .class-c .card-title { color: #45B7D1; }
+        
+        @media (max-width: 768px) {
+            div[style*="grid-template-columns: 2fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+            
+            div[style*="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))"] {
+                grid-template-columns: 1fr !important;
+            }
+            
+            div[style*="display: flex; gap: 15px; justify-content: center;"] {
+                flex-direction: column !important;
+            }
+        }
+    </style>
+</body>
+</html>

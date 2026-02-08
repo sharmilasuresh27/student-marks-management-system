@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" onclick="toggleTheme('light')" title="Light Mode">
+            ☀️
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme('dark')" title="Dark Mode">
+            🌙
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Analytics Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📈 Analytics Dashboard - Class {{ teacher_class }}</h1>
+                <span class="badge badge-info">{{ performance_data|length }} Students</span>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.tamil or 0) }}</div>
+                <div class="stat-label">Tamil Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.english or 0) }}</div>
+                <div class="stat-label">English Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.maths or 0) }}</div>
+                <div class="stat-label">Maths Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.science or 0) }}</div>
+                <div class="stat-label">Science Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.social or 0) }}</div>
+                <div class="stat-label">Social Average</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Performance Charts</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 20px;">
+                <!-- Subject Performance Chart -->
+                <div>
+                    <h3 style="margin-bottom: 15px; color: #333;">Subject-wise Performance</h3>
+                    <canvas id="subjectChart" width="400" height="300"></canvas>
+                </div>
+                
+                <!-- Grade Distribution Chart -->
+                <div>
+                    <h3 style="margin-bottom: 15px; color: #333;">Grade Distribution</h3>
+                    <canvas id="gradeChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Trends -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">� Performance Trends</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <h3 style="margin-bottom: 15px; color: #333;">Monthly Performance Trend</h3>
+                <canvas id="trendChart" width="800" height="400"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Performers -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏆 Top Performers</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Student Name</th>
+                            <th>Student ID</th>
+                            <th>Total</th>
+                            <th>Average</th>
+                            <th>Grade</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in performance_data[:10] %}
+                        <tr class="{{ 'pass-row' if student.status == 'PASS' else 'fail-row' }}">
+                            <td>
+                                {% if loop.index == 1 %}
+                                    <span class="rank-badge rank-1">🥇 {{ loop.index }}</span>
+                                {% elif loop.index == 2 %}
+                                    <span class="rank-badge rank-2">🥈 {{ loop.index }}</span>
+                                {% elif loop.index == 3 %}
+                                    <span class="rank-badge rank-3">🥉 {{ loop.index }}</span>
+                                {% else %}
+                                    <span class="rank-badge">{{ loop.index }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ student.name }}</strong></td>
+                            <td>{{ student.student_id }}</td>
+                            <td><strong>{{ student.total }}</strong></td>
+                            <td><strong>{{ "%.1f"|format(student.average) }}</strong></td>
+                            <td>
+                                <span class="grade-{{ student.grade.lower().replace('+', '-plus') }}">
+                                    {{ student.grade }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if student.status == 'PASS' else 'danger' }}">
+                                    {{ student.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detailed Performance Table -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📋 Detailed Performance Analysis</h2>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/export-pdf" class="btn btn-success btn-sm">📄 Export PDF</a>
+                    <a href="/bulk-import" class="btn btn-warning btn-sm">📥 Bulk Import</a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)" style="cursor: pointer;">Rank ↕️</th>
+                            <th onclick="sortTable(1)" style="cursor: pointer;">Name ↕️</th>
+                            <th onclick="sortTable(2)" style="cursor: pointer;">Total ↕️</th>
+                            <th onclick="sortTable(3)" style="cursor: pointer;">Average ↕️</th>
+                            <th onclick="sortTable(4)" style="cursor: pointer;">Grade ↕️</th>
+                            <th>Status</th>
+                            <th>Profile</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in performance_data %}
+                        <tr class="{{ 'pass-row' if student.status == 'PASS' else 'fail-row' }}">
+                            <td><strong>{{ loop.index }}</strong></td>
+                            <td><strong>{{ student.name }}</strong></td>
+                            <td><strong>{{ student.total }}</strong></td>
+                            <td><strong>{{ "%.1f"|format(student.average) }}</strong></td>
+                            <td>
+                                <span class="grade-{{ student.grade.lower().replace('+', '-plus') }}">
+                                    {{ student.grade }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if student.status == 'PASS' else 'danger' }}">
+                                    {{ student.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/student-profile/{{ student.id }}" class="btn btn-primary btn-sm">
+                                    👤 Profile
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Grade Distribution Chart
+        const gradeCtx = document.getElementById('gradeChart').getContext('2d');
+        const gradeLabels = [{% for grade in grade_distribution %}'{{ grade.grade }}'{% if not loop.last %},{% endif %}{% endfor %}];
+        const gradeData = [{% for grade in grade_distribution %}{{ grade.count }}{% if not loop.last %},{% endif %}{% endfor %}];
+        const gradeChart = new Chart(gradeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: gradeLabels,
+                datasets: [{
+                    data: gradeData,
+                    backgroundColor: [
+                        '#6c5ce7', '#00b894', '#00cec9', '#fdcb6e', '#e17055', '#ff6b6b', '#d63031'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Subject Performance Chart
+        const subjectCtx = document.getElementById('subjectChart').getContext('2d');
+        const subjectChart = new Chart(subjectCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Tamil', 'English', 'Maths', 'Science', 'Social'],
+                datasets: [{
+                    label: 'Class Average',
+                    data: [
+                        {{ "%.1f"|format(subject_averages['tamil_avg']) }},
+                        {{ "%.1f"|format(subject_averages['english_avg']) }},
+                        {{ "%.1f"|format(subject_averages['maths_avg']) }},
+                        {{ "%.1f"|format(subject_averages['science_avg']) }},
+                        {{ "%.1f"|format(subject_averages['social_avg']) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 107, 107, 0.8)',
+                        'rgba(78, 205, 196, 0.8)',
+                        'rgba(69, 183, 209, 0.8)',
+                        'rgba(253, 203, 110, 0.8)',
+                        'rgba(225, 112, 85, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // Monthly Trend Chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for month in monthly_trend %}'{{ month['month'] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Average Total',
+                    data: [{% for month in monthly_trend %}{{ month['avg_total']|round(1) }}{% if not loop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'Student Count',
+                    data: [{% for month in monthly_trend %}{{ month['student_count'] }}{% if not loop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#00b894',
+                    backgroundColor: 'rgba(0, 184, 148, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        position: 'left'
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector(".table");
+            const rows = Array.from(table.rows).slice(1);
+            const isAscending = table.getAttribute('data-order') !== 'asc';
+            
+            rows.sort((a, b) => {
+                let valA = a.cells[columnIndex].textContent.trim();
+                let valB = b.cells[columnIndex].textContent.trim();
+                
+                if ([0, 2, 3].includes(columnIndex)) {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                    return isAscending ? valA - valB : valB - valA;
+                }
+                
+                return isAscending ? 
+                    valA.localeCompare(valB) : 
+                    valB.localeCompare(valA);
+            });
+            
+            table.setAttribute('data-order', isAscending ? 'asc' : 'desc');
+            table.tBodies[0].append(...rows);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weak Students - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">⚠️ Weak Students - Class {{ teacher_class }}</h1>
+                <span class="badge badge-warning">{{ weak_students|length }} Students Need Attention</span>
+            </div>
+            <p style="color: #666; font-size: 16px;">
+                Students who need academic support and additional attention to improve their performance.
+            </p>
+        </div>
+
+        {% if weak_students %}
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ff6b6b;">{{ weak_students|length }}</div>
+                    <div class="stat-label">Students Need Help</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #fdcb6e;">
+                        {% set failed_count = weak_students|selectattr('status', 'equalto', 'FAIL')|list|length %}
+                        {{ failed_count }}
+                    </div>
+                    <div class="stat-label">Failed Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #e17055;">
+                        {% set weak_avg = (weak_students|map(attribute='average')|sum / weak_students|length) %}
+                        {{ "%.1f"|format(weak_avg) }}
+                    </div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #0984e3;">
+                        {% set lowest_score = weak_students|map(attribute='total')|min %}
+                        {{ lowest_score }}
+                    </div>
+                    <div class="stat-label">Lowest Score</div>
+                </div>
+            </div>
+
+            <!-- Weak Students Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 Students Requiring Academic Support</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <span class="badge badge-danger">Critical</span>
+                        <span class="badge badge-warning">Needs Attention</span>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="weakStudentSearch" class="search-input" placeholder="Search weak students..." onkeyup="filterWeakStudents()">
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortWeakTable(0)" style="cursor: pointer;">Student ID ↕️</th>
+                                <th onclick="sortWeakTable(1)" style="cursor: pointer;">Name ↕️</th>
+                                <th>Tamil</th>
+                                <th>English</th>
+                                <th>Maths</th>
+                                <th>Science</th>
+                                <th>Social</th>
+                                <th onclick="sortWeakTable(7)" style="cursor: pointer;">Total ↕️</th>
+                                <th onclick="sortWeakTable(8)" style="cursor: pointer;">Average ↕️</th>
+                                <th>Grade</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in weak_students %}
+                            <tr class="{{ 'critical-row' if student['status'] == 'FAIL' else 'warning-row' }}">
+                                <td><strong>{{ student['student_id'] }}</strong></td>
+                                <td><strong>{{ student['name'] }}</strong></td>
+                                <td class="{{ 'fail-mark' if student['tamil'] < 35 else 'weak-mark' if student['tamil'] < 50 else '' }}">
+                                    {{ student['tamil'] }}
+                                </td>
+                                <td class="{{ 'fail-mark' if student['english'] < 35 else 'weak-mark' if student['english'] < 50 else '' }}">
+                                    {{ student['english'] }}
+                                </td>
+                                <td class="{{ 'fail-mark' if student['maths'] < 35 else 'weak-mark' if student['maths'] < 50 else '' }}">
+                                    {{ student['maths'] }}
+                                </td>
+                                <td class="{{ 'fail-mark' if student['science'] < 35 else 'weak-mark' if student['science'] < 50 else '' }}">
+                                    {{ student['science'] }}
+                                </td>
+                                <td class="{{ 'fail-mark' if student['social'] < 35 else 'weak-mark' if student['social'] < 50 else '' }}">
+                                    {{ student['social'] }}
+                                </td>
+                                <td><strong>{{ student['total'] }}</strong></td>
+                                <td><strong>{{ "%.1f"|format(student['average']) }}</strong></td>
+                                <td>
+                                    <span class="grade-{{ student['grade'].lower().replace('+', '-plus') }}">
+                                        {{ student['grade'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-{{ 'danger' if student['status'] == 'FAIL' else 'warning' }}">
+                                        {{ student['status'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if student['status'] == 'FAIL' %}
+                                        <span class="badge badge-danger">🚨 Critical</span>
+                                    {% elif student['average'] < 40 %}
+                                        <span class="badge badge-warning">⚠️ High Priority</span>
+                                    {% else %}
+                                        <span class="badge badge-info">📋 Monitor</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="/edit/{{ student['id'] }}" class="btn btn-warning btn-sm">
+                                            ✏️ Edit
+                                        </a>
+                                        <a href="/delete/{{ student['id'] }}" class="btn btn-danger btn-sm" 
+                                           onclick="return confirm('Delete this student?');">
+                                            🗑️ Delete
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💡 Academic Recommendations</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(255, 107, 107, 0.1); padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+                            <h4 style="color: #ff6b6b; margin-bottom: 10px;">🚨 For Failed Students</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #666;">
+                                <li>Provide one-on-one tutoring sessions</li>
+                                <li>Focus on subjects with scores below 35</li>
+                                <li>Consider remedial classes</li>
+                                <li>Regular progress monitoring</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(253, 203, 110, 0.1); padding: 20px; border-radius: 10px; border-left: 4px solid #fdcb6e;">
+                            <h4 style="color: #fdcb6e; margin-bottom: 10px;">📚 For Weak Performers</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #666;">
+                                <li>Additional practice materials</li>
+                                <li>Peer study groups</li>
+                                <li>Extra credit assignments</li>
+                                <li>Parent-teacher meetings</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(69, 183, 209, 0.1); padding: 20px; border-radius: 10px; border-left: 4px solid #45B7D1;">
+                            <h4 style="color: #45B7D1; margin-bottom: 10px;">📈 General Strategies</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #666;">
+                                <li>Weekly progress assessments</li>
+                                <li>Motivational counseling</li>
+                                <li>Interactive learning methods</li>
+                                <li>Study skill development</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- No Weak Students -->
+            <div class="card">
+                <div style="text-align: center; padding: 60px 20px;">
+                    <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+                    <h2 style="color: #00b894; margin-bottom: 15px; font-size: 28px;">Excellent Performance!</h2>
+                    <p style="color: #666; font-size: 18px; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        Great news! All students in Class {{ teacher_class }} are performing well and don't require additional academic support. 
+                        Keep up the excellent teaching work!
+                    </p>
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <a href="/dashboard" class="btn btn-success">
+                            📊 View Dashboard
+                        </a>
+                        <a href="/" class="btn btn-primary">
+                            👥 View All Students
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <style>
+        .critical-row {
+            background: linear-gradient(90deg, rgba(255, 107, 107, 0.1) 0%, rgba(238, 90, 36, 0.1) 100%);
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .warning-row {
+            background: linear-gradient(90deg, rgba(253, 203, 110, 0.1) 0%, rgba(225, 112, 85, 0.1) 100%);
+            border-left: 4px solid #fdcb6e;
+        }
+        
+        .critical-row:hover {
+            background: linear-gradient(90deg, rgba(255, 107, 107, 0.2) 0%, rgba(238, 90, 36, 0.2) 100%);
+        }
+        
+        .warning-row:hover {
+            background: linear-gradient(90deg, rgba(253, 203, 110, 0.2) 0%, rgba(225, 112, 85, 0.2) 100%);
+        }
+        
+        .fail-mark {
+            color: #d63031;
+            font-weight: bold;
+            background: rgba(214, 48, 49, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .weak-mark {
+            color: #e17055;
+            font-weight: bold;
+            background: rgba(225, 112, 85, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        function filterWeakStudents() {
+            const input = document.getElementById("weakStudentSearch");
+            const filter = input.value.toUpperCase();
+            const table = document.querySelector(".table");
+            const tr = table.getElementsByTagName("tr");
+            
+            for (let i = 1; i < tr.length; i++) {
+                const nameCell = tr[i].getElementsByTagName("td")[1];
+                const idCell = tr[i].getElementsByTagName("td")[0];
+                
+                if (nameCell && idCell) {
+                    const nameValue = nameCell.textContent || nameCell.innerText;
+                    const idValue = idCell.textContent || idCell.innerText;
+                    
+                    if (nameValue.toUpperCase().indexOf(filter) > -1 || 
+                        idValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+
+        function sortWeakTable(columnIndex) {
+            const table = document.querySelector(".table");
+            const rows = Array.from(table.rows).slice(1);
+            const isAscending = table.getAttribute('data-order') !== 'asc';
+            
+            rows.sort((a, b) => {
+                let valA = a.cells[columnIndex].textContent.trim();
+                let valB = b.cells[columnIndex].textContent.trim();
+                
+                // Handle numeric columns
+                if ([7, 8].includes(columnIndex)) {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                    return isAscending ? valA - valB : valB - valA;
+                }
+                
+                // Handle text columns
+                return isAscending ? 
+                    valA.localeCompare(valB) : 
+                    valB.localeCompare(valA);
+            });
+            
+            table.setAttribute('data-order', isAscending ? 'asc' : 'desc');
+            table.tBodies[0].append(...rows);
+        }
+    </script>
+</body>
+</html>

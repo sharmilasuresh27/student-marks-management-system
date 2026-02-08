@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" onclick="toggleTheme('light')" title="Light Mode">
+            ☀️
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme('dark')" title="Dark Mode">
+            🌙
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Analytics Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📈 Analytics Dashboard - Class {{ teacher_class }}</h1>
+                <span class="badge badge-info">{{ performance_data|length }} Students</span>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.tamil or 0) }}</div>
+                <div class="stat-label">Tamil Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.english or 0) }}</div>
+                <div class="stat-label">English Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.maths or 0) }}</div>
+                <div class="stat-label">Maths Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.science or 0) }}</div>
+                <div class="stat-label">Science Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ "%.1f"|format(subject_averages.social or 0) }}</div>
+                <div class="stat-label">Social Average</div>
+            </div>
+        </div>
+
+        <!-- Grade Distribution -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Grade Distribution</h2>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    {% for grade in grade_distribution %}
+                    <div style="text-align: center; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">{{ grade.count }}</div>
+                        <div style="font-size: 18px; margin-top: 5px;">Grade {{ grade.grade }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Trends -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Performance Trends</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Average Total</th>
+                            <th>Student Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trend in monthly_trend %}
+                        <tr>
+                            <td><strong>{{ trend.month }}</strong></td>
+                            <td><strong>{{ "%.1f"|format(trend.avg_total) }}</strong></td>
+                            <td>{{ trend.student_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Performers -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏆 Top Performers</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Student Name</th>
+                            <th>Student ID</th>
+                            <th>Total</th>
+                            <th>Average</th>
+                            <th>Grade</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in performance_data[:10] %}
+                        <tr class="{{ 'pass-row' if student.status == 'PASS' else 'fail-row' }}">
+                            <td>
+                                {% if loop.index == 1 %}
+                                    <span class="rank-badge rank-1">🥇 {{ loop.index }}</span>
+                                {% elif loop.index == 2 %}
+                                    <span class="rank-badge rank-2">🥈 {{ loop.index }}</span>
+                                {% elif loop.index == 3 %}
+                                    <span class="rank-badge rank-3">🥉 {{ loop.index }}</span>
+                                {% else %}
+                                    <span class="rank-badge">{{ loop.index }}</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ student.name }}</strong></td>
+                            <td>{{ student.student_id }}</td>
+                            <td><strong>{{ student.total }}</strong></td>
+                            <td><strong>{{ "%.1f"|format(student.average) }}</strong></td>
+                            <td>
+                                <span class="grade-{{ student.grade.lower().replace('+', '-plus') }}">
+                                    {{ student.grade }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if student.status == 'PASS' else 'danger' }}">
+                                    {{ student.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📄 Export Options</h2>
+            </div>
+            
+            <div class="export-buttons">
+                <a href="/export-pdf" class="btn-export btn-export-pdf">
+                    📄 Export PDF
+                </a>
+                <a href="/export-word" class="btn-export btn-export-word">
+                    📝 Export Word
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Function
+        function toggleTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Save theme preference to session
+            fetch('/toggle-theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'theme=' + theme
+            }).then(response => response.json())
+              .then(data => {
+                console.log('Theme changed to:', data.theme);
+              });
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+    </script>
+</body>
+</html>

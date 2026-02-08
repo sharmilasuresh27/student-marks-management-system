@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" onclick="toggleTheme('light')" title="Light Mode">
+            ☀️
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme('dark')" title="Dark Mode">
+            🌙
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/attendance" class="nav-link">📅 Attendance</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📊 Attendance Report - Class {{ teacher_class }}</h1>
+                <span class="badge badge-info">Last 30 Days</span>
+            </div>
+            <p style="color: #666; font-size: 16px;">
+                Comprehensive attendance analysis for the last 30 days with detailed statistics and trends.
+            </p>
+        </div>
+
+        <!-- Attendance Summary Table -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📈 Attendance Summary</h2>
+            </div>
+            
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Student ID</th>
+                            <th>✅ Present Days</th>
+                            <th>❌ Absent Days</th>
+                            <th>⏰ Late Days</th>
+                            <th>📊 Total Days</th>
+                            <th>📈 Attendance %</th>
+                            <th>🏆 Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_summary %}
+                        {% set attendance_percentage = (record.present_days / record.total_days * 100) if record.total_days > 0 else 0 %}
+                        
+                        <tr>
+                            <td><strong>{{ record.name }}</strong></td>
+                            <td>{{ record.student_id }}</td>
+                            <td>
+                                <span class="badge badge-success">{{ record.present_days }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-danger">{{ record.absent_days }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">{{ record.late_days }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-info">{{ record.total_days }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if attendance_percentage >= 90 else 'warning' if attendance_percentage >= 75 else 'danger' }}">
+                                    {{ "%.1f"|format(attendance_percentage) }}%
+                                </span>
+                            </td>
+                            <td>
+                                {% if attendance_percentage >= 90 %}
+                                    <span class="badge badge-success">🏆 Excellent</span>
+                                {% elif attendance_percentage >= 75 %}
+                                    <span class="badge badge-warning">👍 Good</span>
+                                {% elif attendance_percentage >= 60 %}
+                                    <span class="badge badge-info">📚 Average</span>
+                                {% else %}
+                                    <span class="badge badge-danger">⚠️ Poor</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Class Statistics</h2>
+            </div>
+            
+            {% set total_students = attendance_summary|length %}
+            {% set total_present = attendance_summary|sum(attribute='present_days') %}
+            {% set total_absent = attendance_summary|sum(attribute='absent_days') %}
+            {% set total_late = attendance_summary|sum(attribute='late_days') %}
+            {% set avg_attendance = (total_present / (total_present + total_absent + total_late) * 100) if (total_present + total_absent + total_late) > 0 else 0 %}
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_students }}</div>
+                    <div class="stat-label">👥 Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_present }}</div>
+                    <div class="stat-label">✅ Total Present</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_absent }}</div>
+                    <div class="stat-label">❌ Total Absent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_late }}</div>
+                    <div class="stat-label">⏰ Total Late</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ "%.1f"|format(avg_attendance) }}%</div>
+                    <div class="stat-label">📈 Average Attendance</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="card">
+            <div style="padding: 20px; text-align: center;">
+                <a href="/attendance" class="btn btn-primary" style="font-size: 18px; padding: 15px 30px;">
+                    📅 Back to Attendance
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Function
+        function toggleTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Save theme preference to session
+            fetch('/toggle-theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'theme=' + theme
+            }).then(response => response.json())
+              .then(data => {
+                console.log('Theme changed to:', data.theme);
+              });
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+    </script>
+</body>
+</html>

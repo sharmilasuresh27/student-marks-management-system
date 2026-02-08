@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Student - School Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Edit Form -->
+        <div class="card class-{{ student['class'].lower() }}">
+            <div class="card-header">
+                <h1 class="card-title">✏️ Edit Student Information</h1>
+                <span class="badge badge-info">{{ student['student_id'] }}</span>
+            </div>
+
+            <form method="POST">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Student Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ student['name'] }}" required>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Student ID</label>
+                            <input type="text" class="form-control" value="{{ student['student_id'] }}" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Class</label>
+                            <input type="text" class="form-control" value="{{ student['class'] }}" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Class Teacher</label>
+                            <input type="text" class="form-control" value="{{ student['class_teacher'] }}" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 20px; color: #333;">📚 Subject Marks</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div class="form-group">
+                            <label class="form-label">Tamil</label>
+                            <input type="number" name="tamil" class="form-control" value="{{ student['tamil'] }}" min="0" max="100" required>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max: 100 marks</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">English</label>
+                            <input type="number" name="english" class="form-control" value="{{ student['english'] }}" min="0" max="100" required>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max: 100 marks</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Mathematics</label>
+                            <input type="number" name="maths" class="form-control" value="{{ student['maths'] }}" min="0" max="100" required>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max: 100 marks</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Science</label>
+                            <input type="number" name="science" class="form-control" value="{{ student['science'] }}" min="0" max="100" required>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max: 100 marks</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Social Science</label>
+                            <input type="number" name="social" class="form-control" value="{{ student['social'] }}" min="0" max="100" required>
+                            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max: 100 marks</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Performance Summary -->
+                <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #333;">📊 Current Performance</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #667eea;">{{ student['total'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Total Marks</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #00b894;">{{ "%.1f"|format(student['average']) }}</div>
+                            <div style="color: #666; font-size: 14px;">Average</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #fdcb6e;">{{ student['grade'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Grade</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <span class="badge badge-{{ 'success' if student['status'] == 'PASS' else 'danger' }}" style="font-size: 16px; padding: 8px 16px;">
+                                {{ student['status'] }}
+                            </span>
+                            <div style="color: #666; font-size: 14px; margin-top: 5px;">Status</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button type="submit" class="btn btn-primary" style="padding: 15px 30px;">
+                        💾 Update Student Information
+                    </button>
+                    <a href="/" class="btn btn-danger" style="padding: 15px 30px; text-decoration: none;">
+                        ❌ Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📋 Editing Instructions</h3>
+            </div>
+            <div style="padding: 20px;">
+                <ul style="color: #666; line-height: 1.8;">
+                    <li>📝 Update the student's name if needed</li>
+                    <li>🔢 Modify subject marks between 0-100</li>
+                    <li>📊 Total, average, grade, and status will be calculated automatically</li>
+                    <li>✅ Click "Update Student Information" to save changes</li>
+                    <li>❌ Click "Cancel" to return without saving</li>
+                </ul>
+                <div style="background: rgba(255, 107, 107, 0.1); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ff6b6b;">
+                    <strong style="color: #ff6b6b;">⚠️ Important:</strong> 
+                    <span style="color: #666;">Students with marks below 35 in any subject will be marked as FAIL.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @media (max-width: 768px) {
+            div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+            
+            div[style*="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))"] {
+                grid-template-columns: 1fr !important;
+            }
+            
+            div[style*="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))"] {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            
+            div[style*="display: flex; gap: 15px"] {
+                flex-direction: column !important;
+            }
+        }
+    </style>
+</body>
+</html>

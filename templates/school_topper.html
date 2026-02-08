@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Topper - School Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if topper %}
+            <!-- School Topper Crown -->
+            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255, 255, 255, 0.1); border-radius: 50%;"></div>
+                <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.05); border-radius: 50%;"></div>
+                
+                <div style="position: relative; z-index: 1; padding: 40px 20px;">
+                    <div style="font-size: 80px; margin-bottom: 20px;">👑</div>
+                    <h1 style="font-size: 48px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+                        School Topper
+                    </h1>
+                    <p style="font-size: 20px; opacity: 0.9; margin-bottom: 0;">
+                        Academic Excellence Award 2024
+                    </p>
+                </div>
+            </div>
+
+            <!-- Topper Details -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🎓 Student Information</h2>
+                        <span class="rank-badge rank-1" style="font-size: 16px;">🥇 #1</span>
+                    </div>
+                    
+                    <div style="padding: 20px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="width: 120px; height: 120px; background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 48px; color: white;">
+                                {{ topper['name'][0]|upper if topper['name'] else 'S' }}
+                            </div>
+                            <h3 style="color: #333; margin-bottom: 10px; font-size: 28px;">{{ topper['name'] }}</h3>
+                            <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+                                <span class="badge badge-info" style="font-size: 14px;">{{ topper['student_id'] }}</span>
+                                <span class="badge badge-warning" style="font-size: 14px;">Class {{ topper['class'] }}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; color: #667eea;">{{ topper['total'] }}</div>
+                                <div style="color: #666; font-size: 14px;">Total Marks</div>
+                                <div style="color: #999; font-size: 12px;">out of 500</div>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 32px; font-weight: bold; color: #00b894;">{{ "%.1f"|format(topper['average']) }}</div>
+                                <div style="color: #666; font-size: 14px;">Average</div>
+                                <div style="color: #999; font-size: 12px;">percentage</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; text-align: center;">
+                            <span class="grade-{{ topper['grade'].lower().replace('+', '-plus') }}" style="font-size: 24px; font-weight: bold;">
+                                Grade: {{ topper['grade'] }}
+                            </span>
+                            <span class="badge badge-success" style="margin-left: 10px; font-size: 16px;">
+                                {{ topper['status'] }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📊 Performance Metrics</h3>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span style="color: #666;">Overall Performance</span>
+                                    <span style="font-weight: bold; color: #667eea;">{{ (topper['total'] / 500 * 100)|round(1) }}%</span>
+                                </div>
+                                <div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div style="background: linear-gradient(45deg, #667eea, #764ba2); height: 100%; width: {{ (topper['total'] / 500 * 100) }}%; transition: width 1s ease;"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: center; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                                <div style="font-size: 16px; color: #666; margin-bottom: 5px;">Class Teacher</div>
+                                <div style="font-size: 18px; font-weight: bold; color: #333;">{{ topper['class_teacher'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-header">
+                            <h3 class="card-title">🏆 Achievements</h3>
+                        </div>
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🌟</div>
+                            <div style="font-size: 16px; color: #666; margin-bottom: 15px;">Outstanding Performance</div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="padding: 8px; background: rgba(0, 184, 148, 0.1); border-radius: 5px; font-size: 14px;">
+                                    📚 Excellence in Academics
+                                </div>
+                                <div style="padding: 8px; background: rgba(253, 203, 110, 0.1); border-radius: 5px; font-size: 14px;">
+                                    🎯 Consistent High Performance
+                                </div>
+                                <div style="padding: 8px; background: rgba(69, 183, 209, 0.1); border-radius: 5px; font-size: 14px;">
+                                    👑 School Rank #1
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject-wise Performance -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📚 Subject-wise Performance</h2>
+                    <span class="badge badge-info">Detailed Analysis</span>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
+                        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 15px; border: 2px solid transparent; transition: all 0.3s ease;" 
+                             onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-5px)'" 
+                             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                            <div style="font-size: 32px; margin-bottom: 10px;">📚</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">{{ topper['tamil'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Tamil</div>
+                            <div style="margin-top: 10px;">
+                                {% if topper['tamil'] >= 90 %}
+                                    <span class="badge badge-success">Excellent</span>
+                                {% elif topper['tamil'] >= 75 %}
+                                    <span class="badge badge-info">Good</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Average</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 15px; border: 2px solid transparent; transition: all 0.3s ease;" 
+                             onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-5px)'" 
+                             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                            <div style="font-size: 32px; margin-bottom: 10px;">📖</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">{{ topper['english'] }}</div>
+                            <div style="color: #666; font-size: 14px;">English</div>
+                            <div style="margin-top: 10px;">
+                                {% if topper['english'] >= 90 %}
+                                    <span class="badge badge-success">Excellent</span>
+                                {% elif topper['english'] >= 75 %}
+                                    <span class="badge badge-info">Good</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Average</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 15px; border: 2px solid transparent; transition: all 0.3s ease;" 
+                             onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-5px)'" 
+                             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                            <div style="font-size: 32px; margin-bottom: 10px;">🔢</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">{{ topper['maths'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Mathematics</div>
+                            <div style="margin-top: 10px;">
+                                {% if topper['maths'] >= 90 %}
+                                    <span class="badge badge-success">Excellent</span>
+                                {% elif topper['maths'] >= 75 %}
+                                    <span class="badge badge-info">Good</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Average</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 15px; border: 2px solid transparent; transition: all 0.3s ease;" 
+                             onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-5px)'" 
+                             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                            <div style="font-size: 32px; margin-bottom: 10px;">🔬</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">{{ topper['science'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Science</div>
+                            <div style="margin-top: 10px;">
+                                {% if topper['science'] >= 90 %}
+                                    <span class="badge badge-success">Excellent</span>
+                                {% elif topper['science'] >= 75 %}
+                                    <span class="badge badge-info">Good</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Average</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 15px; border: 2px solid transparent; transition: all 0.3s ease;" 
+                             onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-5px)'" 
+                             onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                            <div style="font-size: 32px; margin-bottom: 10px;">🌍</div>
+                            <div style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px;">{{ topper['social'] }}</div>
+                            <div style="color: #666; font-size: 14px;">Social Science</div>
+                            <div style="margin-top: 10px;">
+                                {% if topper['social'] >= 90 %}
+                                    <span class="badge badge-success">Excellent</span>
+                                {% elif topper['social'] >= 75 %}
+                                    <span class="badge badge-info">Good</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Average</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- No Students Yet -->
+            <div class="card">
+                <div style="text-align: center; padding: 80px 20px;">
+                    <div style="font-size: 120px; margin-bottom: 30px;">📝</div>
+                    <h2 style="color: #666; margin-bottom: 15px; font-size: 32px;">No Students Yet</h2>
+                    <p style="color: #999; font-size: 18px; margin-bottom: 30px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                        The school topper will be displayed here once students are added to the system. 
+                        Start by adding students to track their academic performance.
+                    </p>
+                    <a href="/" class="btn btn-primary" style="font-size: 18px; padding: 15px 30px;">
+                        ➕ Add First Student
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <style>
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            div[style*="grid-template-columns: 2fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Toppers - School Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">🏆 Class Toppers</h1>
+                <span class="badge badge-info">Academic Excellence</span>
+            </div>
+            <p style="color: #666; font-size: 16px;">
+                Celebrating the academic achievements of top-performing students from each class.
+            </p>
+        </div>
+
+        <!-- Class Toppers Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px;">
+            {% for class_name, topper in toppers.items() %}
+            <div class="card class-{{ class_name.lower() }}">
+                <div class="card-header">
+                    <h2 class="card-title">Class {{ class_name }}</h2>
+                    {% if topper %}
+                        <span class="rank-badge rank-1">🥇 Topper</span>
+                    {% endif %}
+                </div>
+                
+                {% if topper %}
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 64px; margin-bottom: 15px;">🏆</div>
+                        <h3 style="color: #333; margin-bottom: 10px; font-size: 24px;">{{ topper['name'] }}</h3>
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <p style="margin: 5px 0;"><strong>Student ID:</strong> {{ topper['student_id'] }}</p>
+                            <p style="margin: 5px 0;"><strong>Class Teacher:</strong> {{ topper['class_teacher'] }}</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;">{{ topper['total'] }}</div>
+                                <div style="color: #666; font-size: 12px;">Total Marks</div>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: bold; color: #00b894;">{{ "%.1f"|format(topper['average']) }}</div>
+                                <div style="color: #666; font-size: 12px;">Average</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
+                            <span class="grade-{{ topper['grade'].lower().replace('+', '-plus') }}" style="font-size: 18px; font-weight: bold;">
+                                {{ topper['grade'] }}
+                            </span>
+                            <span class="badge badge-success" style="font-size: 14px;">
+                                {{ topper['status'] }}
+                            </span>
+                        </div>
+                        
+                        <!-- Subject-wise Marks -->
+                        <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                            <h4 style="margin-bottom: 10px; color: #333;">Subject Performance</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+                                <div>📚 Tamil: <strong>{{ topper['tamil'] }}</strong></div>
+                                <div>📖 English: <strong>{{ topper['english'] }}</strong></div>
+                                <div>🔢 Maths: <strong>{{ topper['maths'] }}</strong></div>
+                                <div>🔬 Science: <strong>{{ topper['science'] }}</strong></div>
+                                <div>🌍 Social: <strong>{{ topper['social'] }}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                        <h4 style="color: #666; margin-bottom: 10px;">No Students Yet</h4>
+                        <p style="color: #999; font-size: 14px;">Class {{ class_name }} doesn't have any students yet.</p>
+                        <a href="/" class="btn btn-primary">Add Students</a>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Statistics Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Performance Summary</h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #667eea;">
+                        {{ toppers.values()|list|length }}
+                    </div>
+                    <div class="stat-label">Classes with Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #00b894;">
+                        {% set total_toppers = toppers.values()|selectattr('total')|list|length %}
+                        {% if total_toppers > 0 %}
+                            {{ ((toppers.values()|selectattr('total')|map(attribute='total')|sum) / total_toppers)|round(1) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Average Topper Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #fdcb6e;">
+                        {% set total_toppers = toppers.values()|selectattr('total')|list|length %}
+                        {% if total_toppers > 0 %}
+                            {{ (toppers.values()|selectattr('total')|map(attribute='total')|max) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Highest Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" style="color: #ff6b6b;">
+                        {% set total_toppers = toppers.values()|selectattr('total')|list|length %}
+                        {% if total_toppers > 0 %}
+                            {{ (toppers.values()|selectattr('total')|map(attribute='total')|min) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <div class="stat-label">Lowest Topper Score</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .class-a { border-left: 6px solid #FF6B6B; }
+        .class-a .card-title { color: #FF6B6B; }
+        
+        .class-b { border-left: 6px solid #4ECDC4; }
+        .class-b .card-title { color: #4ECDC4; }
+        
+        .class-c { border-left: 6px solid #45B7D1; }
+        .class-c .card-title { color: #45B7D1; }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

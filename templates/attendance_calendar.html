@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Calendar - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" onclick="toggleTheme('light')" title="Light Mode">
+            ☀️
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme('dark')" title="Dark Mode">
+            🌙
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/attendance" class="nav-link">📅 Attendance</a>
+                <a href="/attendance-calendar" class="nav-link">📅 Calendar</a>
+                <a href="/bulk-attendance" class="nav-link">📋 Bulk Attendance</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📅 Attendance Calendar - Class {{ teacher_class }}</h1>
+                <span class="badge badge-info">{{ current_month }}</span>
+            </div>
+            <p style="color: #666; font-size: 16px;">
+                Monthly calendar view with attendance tracking. Click on any day to see detailed attendance.
+            </p>
+        </div>
+
+        <!-- Calendar Navigation -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📅 Calendar Navigation</h2>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                <button onclick="changeMonth(-1)" class="btn btn-secondary">⬅️ Previous Month</button>
+                <button onclick="changeMonth(1)" class="btn btn-secondary">Next Month ➡️</button>
+            </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📅 {{ current_month }} - Attendance Overview</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; padding: 20px;">
+                {% for day in range(1, 32) %}
+                    {% set day_date = current_month + '-' + (day|string|zfill(2, '0')) %}
+                    <div class="calendar-day" style="background: {{ '#f8f9fa' if calendar_data[student.id]['attendance'][day] == 'PRESENT' else '#ffebee' if calendar_data[student.id]['attendance'][day] == 'ABSENT' else '#ffcccc' if calendar_data[student.id]['attendance'][day] == 'LATE' else '#fff3cd' }}; border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative;">
+                        <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{{ day }}</div>
+                        <div style="font-size: 12px; color: #666;">
+                            {% for student in calendar_data.values() %}
+                                {% if calendar_data[student.id]['attendance'][day] %}
+                                    <span class="attendance-badge attendance-present">✅</span>
+                                {% elif calendar_data[student.id]['attendance'][day] == 'ABSENT' %}
+                                    <span class="attendance-badge attendance-absent">❌</span>
+                                {% elif calendar_data[student.id]['attendance'][day] == 'LATE' %}
+                                    <span class="attendance-badge attendance-late">⏰</span>
+                                {% else %}
+                                    <span class="attendance-badge attendance-unknown">❓</span>
+                                {% endif %}
+                                <span style="font-size: 10px; display: block; margin-top: 2px;">{{ student.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Legend</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 20px;">
+                <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                    <span class="attendance-badge attendance-present">✅</span>
+                    <span style="font-size: 14px; margin-left: 10px;">Present</span>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #ffebee; border-radius: 8px;">
+                    <span class="attendance-badge attendance-absent">❌</span>
+                    <span style="font-size: 14px; margin-left: 10px;">Absent</span>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #ffcccc; border-radius: 8px;">
+                    <span class="attendance-badge attendance-late">⏰</span>
+                    <span style="font-size: 14px; margin-left: 10px;">Late</span>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                    <span class="attendance-badge attendance-unknown">❓</span>
+                    <span style="font-size: 14px; margin-left: 10px;">No Data</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Quick Stats</h2>
+            </div>
+            
+            <div class="stats-grid">
+                {% set total_days = (current_month|length) %}
+                {% set present_days = 0 %}
+                {% set absent_days = 0 %}
+                {% set late_days = 0 %}
+                {% for student in calendar_data.values() %}
+                    {% for day in range(1, 32) %}
+                        {% if calendar_data[student.id]['attendance'][day] == 'PRESENT' %}
+                            {% set present_days = present_days + 1 %}
+                        {% elif calendar_data[student.id]['attendance'][day] == 'ABSENT' %}
+                            {% set absent_days = absent_days + 1 %}
+                        {% elif calendar_data[student.id]['attendance'][day] == 'LATE' %}
+                            {% set late_days = late_days + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                
+                <div class="stat-card">
+                    <div class="stat-number">{{ present_days }}</div>
+                    <div class="stat-label">✅ Total Present</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ absent_days }}</div>
+                    <div class="stat-label">❌ Total Absent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ late_days }}</div>
+                    <div class="stat-label">⏰ Total Late</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ calendar_data|length }}</div>
+                    <div class="stat-label">👥 Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ "%.1f"|format((present_days / (total_days * calendar_data|length)) * 100) if total_days > 0 else 0) }}%</div>
+                    <div class="stat-label">📈 Attendance Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="card">
+            <div style="padding: 20px; text-align: center;">
+                <a href="/attendance" class="btn btn-primary" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
+                    📅 Back to Daily Attendance
+                </a>
+                <a href="/bulk-attendance" class="btn btn-success" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
+                    📋 Bulk Mark Attendance
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Function
+        function toggleTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Save theme preference to session
+            fetch('/toggle-theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'theme=' + theme
+            }).then(response => response.json())
+              .then(data => {
+                console.log('Theme changed to:', data.theme);
+              });
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+
+        function changeMonth(offset) {
+            const currentMonth = new Date('{{ current_month }}-01');
+            currentMonth.setMonth(currentMonth.getMonth() + offset);
+            
+            // Reload page with new month
+            window.location.href = '/attendance-calendar?month=' + currentMonth.toISOString().slice(0, 7);
+        }
+    </script>
+</body>
+</html>

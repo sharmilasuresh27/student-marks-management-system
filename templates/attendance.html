@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management - Class {{ teacher_class }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" onclick="toggleTheme('light')" title="Light Mode">
+            ☀️
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme('dark')" title="Dark Mode">
+            🌙
+        </button>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                🎓 School Management System
+            </div>
+            <div class="nav-links">
+                <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/" class="nav-link">👥 Students</a>
+                <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+                <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+                <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+                <a href="/all-classes" class="nav-link">📚 All Classes</a>
+                <a href="/analytics" class="nav-link">📈 Analytics</a>
+                <a href="/attendance" class="nav-link">📅 Attendance</a>
+                <a href="/attendance-calendar" class="nav-link">📅 Calendar</a>
+                <a href="/bulk-attendance" class="nav-link">📋 Bulk Attendance</a>
+                <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">📅 Attendance Management - Class {{ teacher_class }}</h1>
+                <span class="badge badge-info">{{ today }}</span>
+            </div>
+            <p style="color: #666; font-size: 16px;">
+                Mark daily attendance for your students. Track presence, absences, and tardiness.
+            </p>
+        </div>
+
+        <!-- Attendance Form -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📝 Mark Attendance - {{ today }}</h2>
+            </div>
+            
+            <form action="/mark-attendance" method="POST" style="padding: 20px;">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td><strong>{{ student.name }}</strong></td>
+                                <td>{{ student.student_id }}</td>
+                                <td>
+                                    <select name="attendance_{{ student.id }}" class="form-control" style="width: 150px;">
+                                        <option value="PRESENT" {% if attendance_records[student.id]['status'] == 'PRESENT' %}selected{% endif %}>✅ Present</option>
+                                        <option value="ABSENT" {% if attendance_records[student.id]['status'] == 'ABSENT' %}selected{% endif %}>❌ Absent</option>
+                                        <option value="LATE" {% if attendance_records[student.id]['status'] == 'LATE' %}selected{% endif %}>⏰ Late</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="remarks_{{ student.id }}" 
+                                           class="form-control" 
+                                           placeholder="Optional remarks..."
+                                           value="{{ attendance_records[student.id]['remarks'] }}"
+                                           style="width: 200px;">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;">
+                        📅 Mark Attendance
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Quick Stats</h2>
+            </div>
+            
+            <div class="stats-grid">
+                {% set present_count = students|length %}
+                {% for student in students %}
+                    {% if attendance_records[student.id]['status'] == 'PRESENT' %}
+                        {% set _ = present_count - 1 %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% set absent_count = students|length %}
+                {% for student in students %}
+                    {% if attendance_records[student.id]['status'] == 'ABSENT' %}
+                        {% set _ = absent_count - 1 %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% set late_count = students|length %}
+                {% for student in students %}
+                    {% if attendance_records[student.id]['status'] == 'LATE' %}
+                        {% set _ = late_count - 1 %}
+                    {% endif %}
+                {% endfor %}
+                
+                <div class="stat-card">
+                    <div class="stat-number">{{ present_count }}</div>
+                    <div class="stat-label">✅ Present</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ absent_count }}</div>
+                    <div class="stat-label">❌ Absent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ late_count }}</div>
+                    <div class="stat-label">⏰ Late</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ students|length }}</div>
+                    <div class="stat-label">👥 Total Students</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="card">
+            <div style="padding: 20px; text-align: center;">
+                <a href="/attendance-report" class="btn btn-success" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
+                    📊 View Attendance Report
+                </a>
+                <a href="/" class="btn btn-primary" style="font-size: 16px; padding: 15px 30px;">
+                    👥 Back to Student Management
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle Function
+        function toggleTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            
+            // Save theme preference to session
+            fetch('/toggle-theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'theme=' + theme
+            }).then(response => response.json())
+              .then(data => {
+                console.log('Theme changed to:', data.theme);
+              });
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+    </script>
+</body>
+</html>
