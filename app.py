@@ -288,6 +288,38 @@ def dashboard():
     
     failed_students = total_students - passed_students
     
+    # Get perfect attendance students for current month
+    from datetime import datetime, date
+    today = date.today()
+    current_month = today.strftime('%Y-%m')
+    
+    # Calculate total school days in current month (excluding weekends)
+    import calendar
+    cal = calendar.monthcalendar(today.year, today.month)
+    school_days = 0
+    for week in cal:
+        for day in week:
+            if day != 0 and week.index(day) < 5:  # Monday to Friday (0-4)
+                if date(today.year, today.month, day) <= today:
+                    school_days += 1
+    
+    # Get perfect attendance students for this class
+    perfect_attendance_count = 0
+    if school_days > 0:
+        all_students = conn.execute(
+            "SELECT id FROM students WHERE class = ?", 
+            (teacher_class,)
+        ).fetchall()
+        
+        for student in all_students:
+            present_days = conn.execute(
+                "SELECT COUNT(*) as count FROM attendance a WHERE a.student_id = ? AND a.status = 'PRESENT' AND strftime('%Y-%m', a.date) = ?", 
+                (student['id'], current_month)
+            ).fetchone()
+            
+            if present_days and present_days['count'] == school_days:
+                perfect_attendance_count += 1
+    
     # Get class topper
     class_topper = conn.execute(
         "SELECT * FROM students WHERE class = ? ORDER BY total DESC LIMIT 1", 
@@ -306,6 +338,7 @@ def dashboard():
                          total_students=total_students,
                          passed_students=passed_students,
                          failed_students=failed_students,
+                         perfect_attendance_count=perfect_attendance_count,
                          class_topper=class_topper,
                          recent_students=recent_students,
                          teacher_class=teacher_class)
@@ -835,59 +868,77 @@ def bulk_import():
         
         return render_template("bulk_import.html")
 
-    @app.route("/student-profile/<int:id>")
-    @login_required
-    def student_profile(id):
-        teacher_class = session.get('teacher_class')
-        conn = get_db()
-        student = conn.execute("""
-            SELECT * FROM students 
-            WHERE id = ? AND class = ?
-        """, (id, teacher_class)).fetchone()
-        conn.close()
-        
-        if not student:
-            flash('Student not found!', 'error')
-            return redirect(url_for('index'))
-        
-        return render_template("student_profile.html", student=student, teacher_class=teacher_class)
+@app.route("/student-profile/<int:id>")
+@login_required
+def student_profile(id):
+    teacher_class = session.get('teacher_class')
+    conn = get_db()
+    student = conn.execute("""
+        SELECT * FROM students 
+        WHERE id = ? AND class = ?
+    """, (id, teacher_class)).fetchone()
+    conn.close()
+    
+    if not student:
+        flash('Student not found!', 'error')
+        return redirect(url_for('index'))
+    
+    return render_template("student_profile.html", student=student, teacher_class=teacher_class)
 
-    @app.route("/attendance")
-    @login_required
-    def attendance():
-        teacher_class = session.get('teacher_class')
-        conn = get_db()
+@app.route("/attendance")
+@login_required
+def attendance():
+    teacher_class = session.get('teacher_class')
+    conn = get_db()
+    
+    # Get selected date from query parameter or use today
+    from datetime import date
+    attendance_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+    
+    # Validate date is not in the future
+    try:
+        selected_date_obj = date.fromisoformat(attendance_date)
+        if selected_date_obj > date.today():
+            flash('Cannot view attendance for future dates!', 'error')
+            attendance_date = date.today().strftime('%Y-%m-%d')
+    except ValueError:
+        flash('Invalid date format!', 'error')
+        attendance_date = date.today().strftime('%Y-%m-%d')
+    
+    # Get all students for the class
+    students = conn.execute("""
+        SELECT * FROM students 
+        WHERE class = ? 
+        ORDER BY name
+    """, (teacher_class,)).fetchall()
+    
+    # Get attendance records for the selected date
+    attendance_records = {}
+    for student in students:
+        attendance = conn.execute("""
+            SELECT status, remarks FROM attendance 
+            WHERE student_id = ? AND date = ?
+        """, (student['id'], attendance_date)).fetchone()
         
-        # Get today's attendance
-        from datetime import date
-        today = date.today().strftime('%Y-%m-%d')
-        
-        # Get all students for the class
-        students = conn.execute("""
-            SELECT * FROM students 
-            WHERE class = ? 
-            ORDER BY name
-        """, (teacher_class,)).fetchall()
-        
-        # Get attendance records for today
-        attendance_records = {}
-        for student in students:
-            attendance = conn.execute("""
-                SELECT status, remarks FROM attendance 
-                WHERE student_id = ? AND date = ?
-            """, (student['id'], today)).fetchone()
-            
-            attendance_records[student['id']] = {
-                'status': attendance['status'] if attendance else 'PRESENT',
-                'remarks': attendance['remarks'] if attendance else ''
-            }
-        
-        conn.close()
-        return render_template("attendance.html", 
-                         students=students, 
-                         attendance_records=attendance_records,
-                         today=today,
-                         teacher_class=teacher_class)
+        attendance_records[student['id']] = {
+            'status': attendance['status'] if attendance else 'PRESENT',
+            'remarks': attendance['remarks'] if attendance else ''
+        }
+    
+    # Calculate statistics for the selected date
+    present_count = sum(1 for record in attendance_records.values() if record['status'] == 'PRESENT')
+    absent_count = sum(1 for record in attendance_records.values() if record['status'] == 'ABSENT')
+    late_count = sum(1 for record in attendance_records.values() if record['status'] == 'LATE')
+    
+    conn.close()
+    return render_template("attendance.html", 
+                     students=students, 
+                     attendance_records=attendance_records,
+                     today=attendance_date,
+                     present_count=present_count,
+                     absent_count=absent_count,
+                     late_count=late_count,
+                     teacher_class=teacher_class)
 
 @app.route("/mark-attendance", methods=['POST'])
 @login_required
@@ -950,21 +1001,10 @@ def attendance_report():
     conn = get_db()
     
     # Get attendance summary for the last 30 days
-    attendance_summary = conn.execute("""
-        SELECT 
-            s.name,
-            s.student_id,
-            COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) as present_days,
-            COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent_days,
-            COUNT(CASE WHEN a.status = 'LATE' THEN 1 END) as late_days,
-            COUNT(*) as total_days
-        FROM students s
-        LEFT JOIN attendance a ON s.id = a.student_id 
-        LEFT JOIN attendance a2 ON s.id = a2.student_id AND a2.date >= date('now', '-30 days')
-        WHERE s.class = ?
-        GROUP BY s.id, s.name
-        ORDER BY s.name
-    """, (teacher_class,)).fetchall()
+    attendance_summary = conn.execute(
+        "SELECT s.name, s.student_id, COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) as present_days, COUNT(CASE WHEN a.status = 'ABSENT' THEN 1 END) as absent_days, COUNT(CASE WHEN a.status = 'LATE' THEN 1 END) as late_days, COUNT(*) as total_days FROM students s LEFT JOIN attendance a ON s.id = a.student_id WHERE s.class = ? AND a.date >= date('now', '-30 days') GROUP BY s.id, s.name ORDER BY s.name", 
+        (teacher_class,)
+    ).fetchall()
     
     conn.close()
     return render_template("attendance_report.html", 
@@ -983,19 +1023,10 @@ def attendance_calendar():
     current_month = today.strftime('%Y-%m')
     
     # Get attendance data for the current month
-    attendance_data = conn.execute("""
-        SELECT 
-            s.name,
-            s.student_id,
-            a.date,
-            a.status,
-            COUNT(*) as total_records
-        FROM students s
-        LEFT JOIN attendance a ON s.id = a.student_id 
-        WHERE s.class = ? AND strftime('%Y-%m', a.date) = ?
-        GROUP BY s.id, s.name, a.date, a.status
-        ORDER BY s.name, a.date
-    """, (teacher_class, current_month)).fetchall()
+    attendance_data = conn.execute(
+        "SELECT s.name, s.student_id, a.date, a.status FROM students s LEFT JOIN attendance a ON s.id = a.student_id WHERE s.class = ? AND strftime('%Y-%m', a.date) = ? ORDER BY s.name, a.date", 
+        (teacher_class, current_month)
+    ).fetchall()
     
     # Get calendar data
     calendar_data = {}
@@ -1008,12 +1039,16 @@ def attendance_calendar():
         
         # Fill attendance for each day of the month
         for day in range(1, 32):
-            day_date = date(today.year, today.month, day)
-            if day_date.strftime('%Y-%m-%d') <= today.strftime('%Y-%m-%d'):
-                for record in attendance_data:
-                    if record['student_id'] == student['id'] and record['date'] == day_date.strftime('%Y-%m-%d'):
-                        calendar_data[student['id']]['attendance'][day] = record['status']
-                        break
+            try:
+                day_date = date(today.year, today.month, day)
+                if day_date.strftime('%Y-%m-%d') <= today.strftime('%Y-%m-%d'):
+                    for record in attendance_data:
+                        if record['student_id'] == student['id'] and record['date'] == day_date.strftime('%Y-%m-%d'):
+                            calendar_data[student['id']]['attendance'][day] = record['status']
+                            break
+            except ValueError:
+                # Skip invalid dates (like February 30th)
+                break
     
     conn.close()
     return render_template("attendance_calendar.html", 
@@ -1021,65 +1056,406 @@ def attendance_calendar():
                          current_month=current_month,
                          teacher_class=teacher_class)
 
-@app.route("/bulk-attendance", methods=['GET', 'POST'])
+@app.route("/perfect-attendance")
 @login_required
-def bulk_attendance():
+def perfect_attendance():
     teacher_class = session.get('teacher_class')
     conn = get_db()
     
-    if request.method == 'POST':
-        from datetime import date
-        attendance_date = request.form.get('date')
-        attendance_data = request.form.to_dict()
-        
-        marked_count = 0
-        for key, value in attendance_data.items():
-            if key.startswith('attendance_'):
-                student_id = key.split('_')[1]
-                status = value
-                remarks = request.form.get(f'remarks_{student_id}', '')
-                
-                # Validate date exists and is not in the future
-                try:
-                    attendance_date_obj = datetime.strptime(attendance_date, '%Y-%m-%d').date()
-                    if attendance_date_obj > date.today():
-                        flash(f'Cannot mark attendance for future date: {attendance_date}', 'error')
-                        continue
-                except ValueError:
-                    flash(f'Invalid date format: {attendance_date}', 'error')
-                    continue
-                
-                # Check if attendance already exists
-                existing = conn.execute("""
-                    SELECT id FROM attendance 
-                    WHERE student_id = ? AND date = ?
-                """, (student_id, attendance_date)).fetchone()
-                
-                if existing:
-                    # Update existing record
-                    conn.execute("""
-                        UPDATE attendance 
-                        SET status = ?, remarks = ? 
-                        WHERE student_id = ? AND date = ?
-                    """, (status, remarks, student_id, attendance_date))
-                else:
-                    # Insert new record
-                    conn.execute("""
-                        INSERT INTO attendance (student_id, date, status, remarks)
-                        VALUES (?, ?, ?, ?)
-                    """, (student_id, attendance_date, status, remarks))
-                
-                marked_count += 1
-        
-        conn.commit()
-        conn.close()
-        
-        if marked_count > 0:
-            flash(f'Successfully marked attendance for {marked_count} students on {attendance_date}!', 'success')
-        else:
-            flash('No attendance data received!', 'error')
+    # Get students with 100% attendance for the current month across all classes
+    from datetime import datetime, date
+    today = date.today()
+    current_month = today.strftime('%Y-%m')
     
-    return redirect(url_for('attendance'))
+    # Calculate total school days in current month (excluding weekends)
+    import calendar
+    cal = calendar.monthcalendar(today.year, today.month)
+    school_days = 0
+    for week in cal:
+        for day in week:
+            if day != 0 and week.index(day) < 5:  # Monday to Friday (0-4)
+                if date(today.year, today.month, day) <= today:
+                    school_days += 1
+    
+    # Get all students from all classes and their attendance
+    all_students = conn.execute(
+        "SELECT s.id, s.name, s.student_id, s.class FROM students s ORDER BY s.class, s.name"
+    ).fetchall()
+    
+    perfect_attendance_students = []
+    for student in all_students:
+        # Count present days for this student
+        present_days = conn.execute(
+            "SELECT COUNT(*) as count FROM attendance a WHERE a.student_id = ? AND a.status = 'PRESENT' AND strftime('%Y-%m', a.date) = ?", 
+            (student['id'], current_month)
+        ).fetchone()
+        
+        if present_days and present_days['count'] == school_days:
+            perfect_attendance_students.append({
+                'name': student['name'],
+                'student_id': student['student_id'],
+                'class': student['class'],
+                'attended_days': present_days['count'],
+                'total_school_days': school_days,
+                'attendance_percentage': 100.0
+            })
+    
+    conn.close()
+    return render_template("perfect_attendance.html", 
+                         perfect_attendance_students=perfect_attendance_students,
+                         current_month=current_month,
+                         school_days=school_days,
+                         teacher_class=teacher_class)
+
+@app.route("/attendance-analytics")
+@login_required
+def attendance_analytics():
+    teacher_class = session.get('teacher_class')
+    conn = get_db()
+    
+    from datetime import date, datetime, timedelta
+    today = date.today()
+    
+    # Calculate comprehensive analytics
+    analytics = {}
+    
+    # Total students
+    analytics['total_students'] = conn.execute(
+        "SELECT COUNT(*) as count FROM students WHERE class = ?", 
+        (teacher_class,)
+    ).fetchone()['count']
+    
+    # Today's attendance
+    today_str = today.strftime('%Y-%m-%d')
+    today_attendance = conn.execute(
+        "SELECT status, COUNT(*) as count FROM attendance a "
+        "JOIN students s ON a.student_id = s.id "
+        "WHERE s.class = ? AND a.date = ? "
+        "GROUP BY status", 
+        (teacher_class, today_str)
+    ).fetchall()
+    
+    attendance_status = {row['status']: row['count'] for row in today_attendance}
+    analytics['present_today'] = attendance_status.get('PRESENT', 0)
+    analytics['absent_today'] = attendance_status.get('ABSENT', 0)
+    analytics['late_today'] = attendance_status.get('LATE', 0)
+    
+    # Overall attendance rate (last 30 days)
+    attendance_rate = conn.execute(
+        "SELECT "
+        "CASE "
+        "WHEN COUNT(*) > 0 THEN "
+        "ROUND((COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*)), 1) "
+        "ELSE 0 "
+        "END as rate "
+        "FROM attendance a "
+        "JOIN students s ON a.student_id = s.id "
+        "WHERE s.class = ? AND a.date >= date('now', '-30 days')", 
+        (teacher_class,)
+    ).fetchone()
+    analytics['attendance_rate'] = attendance_rate['rate'] if attendance_rate else 0
+    
+    # Perfect attendance students
+    current_month = today.strftime('%Y-%m')
+    import calendar
+    cal = calendar.monthcalendar(today.year, today.month)
+    school_days = sum(1 for week in cal for day in week 
+                     if day != 0 and week.index(day) < 5 and date(today.year, today.month, day) <= today)
+    
+    perfect_attendance = 0
+    if school_days > 0:
+        students = conn.execute("SELECT id FROM students WHERE class = ?", (teacher_class,)).fetchall()
+        for student in students:
+            present_days = conn.execute(
+                "SELECT COUNT(*) as count FROM attendance WHERE student_id = ? AND status = 'PRESENT' AND strftime('%Y-%m', date) = ?", 
+                (student['id'], current_month)
+            ).fetchone()
+            if present_days and present_days['count'] == school_days:
+                perfect_attendance += 1
+    
+    analytics['perfect_attendance'] = perfect_attendance
+    
+    # Average daily attendance
+    avg_daily = conn.execute(
+        "SELECT AVG(daily_count) as avg_count FROM ("
+        "SELECT COUNT(*) as daily_count "
+        "FROM attendance a "
+        "JOIN students s ON a.student_id = s.id "
+        "WHERE s.class = ? AND a.date >= date('now', '-30 days') "
+        "GROUP BY a.date"
+        ")",
+        (teacher_class,)
+    ).fetchone()
+    analytics['avg_daily_attendance'] = round(avg_daily['avg_count'], 1) if avg_daily and avg_daily['avg_count'] else 0
+    
+    # Monthly trend data (last 6 months)
+    monthly_data = []
+    monthly_labels = []
+    for i in range(5, -1, -1):
+        month_date = today.replace(day=1) - timedelta(days=30*i)
+        month_str = month_date.strftime('%Y-%m')
+        month_label = month_date.strftime('%b %Y')
+        
+        # Simplified monthly rate calculation
+        month_rate = conn.execute(
+            "SELECT COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*) as rate "
+            "FROM attendance a "
+            "JOIN students s ON a.student_id = s.id "
+            "WHERE s.class = ? AND strftime('%Y-%m', a.date) = ?",
+            (teacher_class, month_str)
+        ).fetchone()
+        
+        monthly_data.append(month_rate['rate'] if month_rate and month_rate['rate'] else 0)
+        monthly_labels.append(month_label)
+    
+    analytics['monthly_data'] = monthly_data
+    analytics['monthly_labels'] = monthly_labels
+    
+    # Attendance distribution
+    analytics['distribution'] = [
+        analytics['present_today'],
+        analytics['absent_today'], 
+        analytics['late_today']
+    ]
+    
+    # Weekly pattern (simplified)
+    weekly_pattern = []
+    for i in range(5):  # Monday to Friday
+        day_pattern = conn.execute(
+            "SELECT COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*) as rate "
+            "FROM attendance a "
+            "JOIN students s ON a.student_id = s.id "
+            "WHERE s.class = ? AND a.date >= date('now', '-30 days') "
+            "AND strftime('%w', a.date) = ?",
+            (teacher_class, str(i))
+        ).fetchone()
+        
+        weekly_pattern.append(day_pattern['rate'] if day_pattern and day_pattern['rate'] else 0)
+    
+    analytics['weekly_pattern'] = weekly_pattern
+    
+    # Alerts and concerns
+    alerts = []
+    concern_students = []
+    
+    # Low attendance rate alert
+    if analytics['attendance_rate'] < 75:
+        alerts.append({
+            'type': 'danger',
+            'title': '⚠️ Low Attendance Rate',
+            'message': f'Class attendance rate is {analytics["attendance_rate"]}% (below 75%)'
+        })
+    
+    # High absentees alert
+    if analytics['absent_today'] > analytics['total_students'] * 0.2:  # More than 20% absent
+        alerts.append({
+            'type': 'warning',
+            'title': '📊 High Absenteeism',
+            'message': f'{analytics["absent_today"]} students absent today ({round(analytics["absent_today"]/analytics["total_students"]*100)}%)'
+        })
+    
+    # Students with attendance concerns
+    concerned_students = conn.execute(
+        "SELECT s.id, s.name, s.student_id, "
+        "(SELECT COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*) as attendance_rate "
+        "FROM attendance a "
+        "WHERE a.student_id = s.id AND a.date >= date('now', '-30 days')) as attendance_rate "
+        "FROM students s "
+        "WHERE s.class = ? "
+        "ORDER BY attendance_rate ASC "
+        "LIMIT 5",
+        (teacher_class,)
+    ).fetchall()
+    
+    for student in concerned_students:
+        concern_students.append({
+            'name': student['name'],
+            'student_id': student['student_id'],
+            'attendance_rate': round(student['attendance_rate'], 1),
+            'concern': 'Low attendance rate'
+        })
+    
+    analytics['alerts'] = alerts
+    analytics['concern_students'] = concern_students
+    
+    conn.close()
+    return render_template("attendance_analytics.html", analytics=analytics, teacher_class=teacher_class)
+
+@app.route("/attendance-alerts")
+@login_required
+def attendance_alerts():
+    teacher_class = session.get('teacher_class')
+    conn = get_db()
+    
+    from datetime import date, datetime, timedelta
+    today = date.today()
+    
+    alerts = {}
+    
+    # Count different types of alerts
+    alerts['critical'] = 0
+    alerts['warning'] = 0
+    alerts['info'] = 0
+    alerts['resolved'] = 0
+    
+    # Generate active alerts based on current attendance situation
+    active_alerts = []
+    
+    # Check for high absenteeism
+    today_str = today.strftime('%Y-%m-%d')
+    today_attendance = conn.execute("""
+        SELECT status, COUNT(*) as count FROM attendance a
+        JOIN students s ON a.student_id = s.id
+        WHERE s.class = ? AND a.date = ?
+        GROUP BY status
+    """, (teacher_class, today_str)).fetchall()
+    
+    attendance_status = {row['status']: row['count'] for row in today_attendance}
+    total_students = conn.execute("SELECT COUNT(*) as count FROM students WHERE class = ?", (teacher_class,)).fetchone()['count']
+    
+    if total_students > 0:
+        absent_rate = (attendance_status.get('ABSENT', 0) / total_students) * 100
+        if absent_rate > 20:  # More than 20% absent
+            active_alerts.append({
+                'id': 1,
+                'type': 'critical',
+                'severity': 'High',
+                'title': '🚨 High Absenteeism Alert',
+                'message': f'{attendance_status.get("ABSENT", 0)} students absent today ({absent_rate:.1f}% of class)',
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                'affected_students': get_absent_students(conn, teacher_class, today_str)
+            })
+            alerts['critical'] += 1
+    
+    # Check for students with low attendance
+    low_attendance_students = conn.execute("""
+        SELECT s.id, s.name, s.student_id,
+               (SELECT COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*))
+               as attendance_rate
+        FROM students s
+        LEFT JOIN attendance a ON s.id = a.student_id AND a.date >= date('now', '-30 days')
+        WHERE s.class = ?
+        GROUP BY s.id, s.name, s.student_id
+        HAVING attendance_rate < 80 AND attendance_rate > 0
+        ORDER BY attendance_rate ASC
+        LIMIT 5
+    """, (teacher_class,)).fetchall()
+    
+    if low_attendance_students:
+        active_alerts.append({
+            'id': 2,
+            'type': 'warning',
+            'severity': 'Medium',
+            'title': '⚠️ Low Attendance Warning',
+            'message': f'{len(low_attendance_students)} students have attendance below 80%',
+            'time': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'affected_students': low_attendance_students
+        })
+        alerts['warning'] += 1
+    
+    # Check for consecutive absences
+    consecutive_absent = conn.execute("""
+        SELECT s.id, s.name, s.student_id, COUNT(*) as consecutive_days
+        FROM students s
+        JOIN attendance a ON s.id = a.student_id
+        WHERE s.class = ? AND a.status = 'ABSENT'
+        AND a.date >= date('now', '-7 days')
+        GROUP BY s.id, s.name, s.student_id
+        HAVING consecutive_days >= 3
+        ORDER BY consecutive_days DESC
+        LIMIT 3
+    """, (teacher_class,)).fetchall()
+    
+    if consecutive_absent:
+        active_alerts.append({
+            'id': 3,
+            'type': 'warning',
+            'severity': 'Medium',
+            'title': '📅 Consecutive Absences',
+            'message': f'{len(consecutive_absent)} students have 3+ consecutive absences',
+            'time': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'affected_students': consecutive_absent
+        })
+        alerts['warning'] += 1
+    
+    # Add info alert for perfect attendance
+    current_month = today.strftime('%Y-%m')
+    import calendar
+    cal = calendar.monthcalendar(today.year, today.month)
+    school_days = sum(1 for week in cal for day in week 
+                     if day != 0 and week.index(day) < 5 and date(today.year, today.month, day) <= today)
+    
+    perfect_attendance = 0
+    if school_days > 0:
+        students = conn.execute("SELECT id FROM students WHERE class = ?", (teacher_class,)).fetchall()
+        for student in students:
+            present_days = conn.execute(
+                "SELECT COUNT(*) as count FROM attendance WHERE student_id = ? AND status = 'PRESENT' AND strftime('%Y-%m', date) = ?", 
+                (student['id'], current_month)
+            ).fetchone()
+            if present_days and present_days['count'] == school_days:
+                perfect_attendance += 1
+    
+    if perfect_attendance > 0:
+        active_alerts.append({
+            'id': 4,
+            'type': 'info',
+            'severity': 'Low',
+            'title': '🏆 Perfect Attendance',
+            'message': f'{perfect_attendance} students have 100% attendance this month!',
+            'time': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'affected_students': []
+        })
+        alerts['info'] += 1
+    
+    alerts['active_alerts'] = active_alerts
+    
+    # Recent alert history (mock data for demonstration)
+    alerts['recent_alerts'] = [
+        {
+            'type': 'warning',
+            'status': 'resolved',
+            'title': 'Low Attendance Warning',
+            'message': '5 students had attendance below 80%',
+            'time': '2026-02-08 14:30',
+            'resolved_by': 'Auto-resolved'
+        },
+        {
+            'type': 'critical',
+            'status': 'resolved',
+            'title': 'High Absenteeism Alert',
+            'message': '8 students absent (26.7% of class)',
+            'time': '2026-02-08 09:15',
+            'resolved_by': 'Teacher Action'
+        }
+    ]
+    
+    # Mock settings (in real app, these would be stored in database)
+    alerts['settings'] = {
+        'alert_absent_threshold': True,
+        'alert_low_attendance': True,
+        'alert_consecutive_absent': True,
+        'email_notifications': True,
+        'daily_summary': False,
+        'parent_notifications': True
+    }
+    
+    conn.close()
+    return render_template("attendance_alerts.html", alerts=alerts, teacher_class=teacher_class)
+
+def get_absent_students(conn, teacher_class, date_str):
+    """Helper function to get absent students for a specific date"""
+    return conn.execute("""
+        SELECT s.id, s.name, s.student_id,
+               (SELECT COUNT(CASE WHEN a.status = 'PRESENT' THEN 1 END) * 100.0 / COUNT(*))
+               as attendance_rate
+        FROM students s
+        LEFT JOIN attendance a ON s.id = a.student_id AND a.date >= date('now', '-30 days')
+        WHERE s.class = ? AND s.id IN (
+            SELECT student_id FROM attendance WHERE date = ? AND status = 'ABSENT'
+        )
+        GROUP BY s.id, s.name, s.student_id
+    """, (teacher_class, date_str)).fetchall()
 
 if __name__ == "__main__":
     app.run(debug=True)

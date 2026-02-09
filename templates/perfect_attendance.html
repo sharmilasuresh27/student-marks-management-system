@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Attendance - {{ teacher_class }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .perfect-attendance {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .student-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #10b981;
+        }
+        .student-card h3 {
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .badge {
+            background: #10b981;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body data-theme="{{ session.get('theme', 'light') }}">
+    <div class="container">
+        <header>
+            <h1>🏆 Perfect Attendance</h1>
+            <p>Students with 100% attendance in {{ current_month }}</p>
+        </header>
+
+        <nav>
+            <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+            <a href="{{ url_for('index') }}">📚 Students</a>
+            <a href="{{ url_for('attendance') }}">📅 Attendance</a>
+            <a href="{{ url_for('attendance_calendar') }}">📆 Calendar</a>
+            <a href="{{ url_for('attendance_report') }}">📊 Reports</a>
+            <a href="{{ url_for('perfect_attendance') }}" class="active">🏆 Perfect Attendance</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+        </nav>
+
+        <div class="theme-toggle">
+            <button onclick="toggleTheme()">🌙/☀️</button>
+        </div>
+
+        <main>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="perfect-attendance">
+                <h2>🎯 Perfect Attendance Students</h2>
+                <p>Students who have attended all {{ school_days }} school days this month</p>
+            </div>
+
+            {% if perfect_attendance_students %}
+                <div class="summary-stats">
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ perfect_attendance_students|length }}</div>
+                            <div class="stat-label">Perfect Attendance</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ school_days }}</div>
+                            <div class="stat-label">School Days</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">100%</div>
+                            <div class="stat-label">Attendance Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="students-grid">
+                    {% for student in perfect_attendance_students %}
+                        <div class="student-card">
+                            <h3>{{ student.name }}</h3>
+                            <p><strong>Student ID:</strong> {{ student.student_id }}</p>
+                            <p><strong>Class:</strong> {{ student.class }}</p>
+                            <div class="badge">100% ATTENDANCE</div>
+                            
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ student.attended_days }}</div>
+                                    <div class="stat-label">Days Attended</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ student.total_school_days }}</div>
+                                    <div class="stat-label">Total Days</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ "%.1f"|format(student.attendance_percentage) }}%</div>
+                                    <div class="stat-label">Attendance %</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <h3>📅 No Perfect Attendance Yet</h3>
+                    <p>No students have achieved 100% attendance this month.</p>
+                    <p>Keep encouraging students to maintain regular attendance!</p>
+                </div>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>&copy; 2024 School Management System. Perfect Attendance Module.</p>
+        </footer>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            body.setAttribute('data-theme', newTheme);
+            
+            fetch('/toggle-theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `theme=${newTheme}`
+            });
+        }
+    </script>
+</body>
+</html>

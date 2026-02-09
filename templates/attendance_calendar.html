@@ -33,7 +33,7 @@
                 <a href="/analytics" class="nav-link">📈 Analytics</a>
                 <a href="/attendance" class="nav-link">📅 Attendance</a>
                 <a href="/attendance-calendar" class="nav-link">📅 Calendar</a>
-                <a href="/bulk-attendance" class="nav-link">📋 Bulk Attendance</a>
+                <a href="/perfect-attendance" class="nav-link">🏆 Perfect Attendance</a>
                 <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
             </div>
         </nav>
@@ -78,27 +78,32 @@
                 <h2 class="card-title">📅 {{ current_month }} - Attendance Overview</h2>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; padding: 20px;">
-                {% for day in range(1, 32) %}
-                    {% set day_date = current_month + '-' + (day|string|zfill(2, '0')) %}
-                    <div class="calendar-day" style="background: {{ '#f8f9fa' if calendar_data[student.id]['attendance'][day] == 'PRESENT' else '#ffebee' if calendar_data[student.id]['attendance'][day] == 'ABSENT' else '#ffcccc' if calendar_data[student.id]['attendance'][day] == 'LATE' else '#fff3cd' }}; border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative;">
-                        <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">{{ day }}</div>
-                        <div style="font-size: 12px; color: #666;">
-                            {% for student in calendar_data.values() %}
-                                {% if calendar_data[student.id]['attendance'][day] %}
-                                    <span class="attendance-badge attendance-present">✅</span>
-                                {% elif calendar_data[student.id]['attendance'][day] == 'ABSENT' %}
-                                    <span class="attendance-badge attendance-absent">❌</span>
-                                {% elif calendar_data[student.id]['attendance'][day] == 'LATE' %}
-                                    <span class="attendance-badge attendance-late">⏰</span>
-                                {% else %}
-                                    <span class="attendance-badge attendance-unknown">❓</span>
-                                {% endif %}
-                                <span style="font-size: 10px; display: block; margin-top: 2px;">{{ student.name }}</span>
-                            {% endfor %}
-                        </div>
+            <div style="padding: 20px;">
+                {% for student in calendar_data.values() %}
+                <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                    <h4>{{ student.name }} ({{ student.student_id }})</h4>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+                        {% for day in range(1, 32) %}
+                            {% if student.attendance.get(day) %}
+                                {% set attendance_status = student.attendance[day] %}
+                                <div class="calendar-day" style="background: {{ '#d4edda' if attendance_status == 'PRESENT' else '#f8d7da' if attendance_status == 'ABSENT' else '#fff3cd' if attendance_status == 'LATE' else '#f8f9fa' }}; border: 1px solid #ddd; border-radius: 4px; padding: 8px; text-align: center; cursor: pointer; position: relative;">
+                                    <div style="font-size: 12px; font-weight: bold;">{{ day }}</div>
+                                    <div style="font-size: 10px;">
+                                        {% if attendance_status == 'PRESENT' %}
+                                            <span>✅</span>
+                                        {% elif attendance_status == 'ABSENT' %}
+                                            <span>❌</span>
+                                        {% elif attendance_status == 'LATE' %}
+                                            <span>⏰</span>
+                                        {% else %}
+                                            <span>❓</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -140,13 +145,13 @@
                 {% set present_days = 0 %}
                 {% set absent_days = 0 %}
                 {% set late_days = 0 %}
-                {% for student in calendar_data.values() %}
+                {% for student_data in calendar_data.values() %}
                     {% for day in range(1, 32) %}
-                        {% if calendar_data[student.id]['attendance'][day] == 'PRESENT' %}
+                        {% if student_data['attendance'].get(day) == 'PRESENT' %}
                             {% set present_days = present_days + 1 %}
-                        {% elif calendar_data[student.id]['attendance'][day] == 'ABSENT' %}
+                        {% elif student_data['attendance'].get(day) == 'ABSENT' %}
                             {% set absent_days = absent_days + 1 %}
-                        {% elif calendar_data[student.id]['attendance'][day] == 'LATE' %}
+                        {% elif student_data['attendance'].get(day) == 'LATE' %}
                             {% set late_days = late_days + 1 %}
                         {% endif %}
                     {% endfor %}
@@ -169,7 +174,7 @@
                     <div class="stat-label">👥 Total Students</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">{{ "%.1f"|format((present_days / (total_days * calendar_data|length)) * 100) if total_days > 0 else 0) }}%</div>
+                    <div class="stat-number">{{ "%.1f"|format((present_days / total_days) * 100) if total_days > 0 else 0 }}%</div>
                     <div class="stat-label">📈 Attendance Rate</div>
                 </div>
             </div>
@@ -181,8 +186,8 @@
                 <a href="/attendance" class="btn btn-primary" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
                     📅 Back to Daily Attendance
                 </a>
-                <a href="/bulk-attendance" class="btn btn-success" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
-                    📋 Bulk Mark Attendance
+                <a href="/perfect-attendance" class="btn btn-success" style="font-size: 16px; padding: 15px 25px; margin-right: 10px;">
+                    🏆 Perfect Attendance
                 </a>
             </div>
         </div>

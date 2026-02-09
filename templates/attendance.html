@@ -33,7 +33,10 @@
                 <a href="/analytics" class="nav-link">📈 Analytics</a>
                 <a href="/attendance" class="nav-link">📅 Attendance</a>
                 <a href="/attendance-calendar" class="nav-link">📅 Calendar</a>
-                <a href="/bulk-attendance" class="nav-link">📋 Bulk Attendance</a>
+                <a href="/attendance-analytics" class="nav-link">📊 Analytics</a>
+                <a href="/attendance-alerts" class="nav-link">🚨 Alerts</a>
+                <a href="/perfect-attendance" class="nav-link">🏆 Perfect Attendance</a>
+                <a href="/attendance-report" class="nav-link">📊 Reports</a>
                 <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
             </div>
         </nav>
@@ -63,17 +66,55 @@
         <!-- Attendance Form -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">📝 Mark Attendance - {{ today }}</h2>
+                <h2 class="card-title">� Mark Attendance</h2>
+                <p class="card-subtitle">Mark attendance for your class on <strong>{{ today }}</strong></p>
             </div>
             
-            <form action="/mark-attendance" method="POST" style="padding: 20px;">
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
+            <!-- Date Selection -->
+            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <label for="attendance_date" style="font-weight: bold; margin-bottom: 10px;">📅 Select Date:</label>
+                <input type="date" 
+                       id="attendance_date" 
+                       name="attendance_date" 
+                       class="form-control" 
+                       value="{{ today }}"
+                       max="{{ today }}"
+                       min="2024-01-01"
+                       style="width: 200px; margin-right: 10px;">
+                <button type="button" onclick="loadAttendance()" class="btn btn-secondary" style="padding: 8px 16px;">
+                    🔄 Load Attendance
+                </button>
+            </div>
+
+            <!-- Attendance Statistics -->
+            <div class="attendance-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card" style="background: #d4edda; border-left: 4px solid #28a745;">
+                    <div class="stat-number">{{ students|length }}</div>
+                    <div class="stat-label">👥 Total Students</div>
+                </div>
+                <div class="stat-card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                    <div class="stat-number">{{ present_count }}</div>
+                    <div class="stat-label">✅ Present Today</div>
+                </div>
+                <div class="stat-card" style="background: #f8d7da; border-left: 4px solid #dc3545;">
+                    <div class="stat-number">{{ absent_count }}</div>
+                    <div class="stat-label">❌ Absent Today</div>
+                </div>
+                <div class="stat-card" style="background: #e2e3e5; border-left: 4px solid #6c757d;">
+                    <div class="stat-number">{{ late_count }}</div>
+                    <div class="stat-label">⏰ Late Today</div>
+                </div>
+            </div>
+
+            <!-- Attendance Form -->
+            <form method="POST" action="/mark-attendance">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
                             <tr>
                                 <th>Student Name</th>
                                 <th>Student ID</th>
-                                <th>Status</th>
+                                <th>Attendance Status</th>
                                 <th>Remarks</th>
                             </tr>
                         </thead>
@@ -105,6 +146,12 @@
                 <div style="text-align: center; margin-top: 20px;">
                     <button type="submit" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;">
                         📅 Mark Attendance
+                    </button>
+                    <button type="button" onclick="exportAttendance()" class="btn btn-success" style="padding: 12px 30px; font-size: 16px; margin-left: 10px;">
+                        📊 Export Report
+                    </button>
+                    <button type="button" onclick="sendNotifications()" class="btn btn-info" style="padding: 12px 30px; font-size: 16px; margin-left: 10px;">
+                        📧 Send Notifications
                     </button>
                 </div>
             </form>
@@ -169,30 +216,152 @@
             </div>
         </div>
     </div>
+    <div class="nav-links">
+        <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+        <a href="/" class="nav-link">👥 Students</a>
+        <a href="/class-toppers" class="nav-link">🏆 Class Toppers</a>
+        <a href="/school-topper" class="nav-link">🥇 School Topper</a>
+        <a href="/weak-students" class="nav-link">⚠️ Weak Students</a>
+        <a href="/all-classes" class="nav-link">📚 All Classes</a>
+        <a href="/analytics" class="nav-link">📈 Analytics</a>
+        <a href="/attendance" class="nav-link">📅 Attendance</a>
+        <a href="/attendance-calendar" class="nav-link">📅 Calendar</a>
+        <a href="/perfect-attendance" class="nav-link">🏆 Perfect Attendance</a>
+        <a href="/attendance-report" class="nav-link">📊 Reports</a>
+        <a href="/logout" class="nav-link logout-btn">🚪 Logout</a>
+    </div>
+</nav>
 
-    <script>
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<script>
         // Theme Toggle Function
         function toggleTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
-            
-            // Save theme preference to session
-            fetch('/toggle-theme', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'theme=' + theme
-            }).then(response => response.json())
-              .then(data => {
-                console.log('Theme changed to:', data.theme);
-              });
+            localStorage.setItem('theme', theme);
         }
-
-        // Load saved theme on page load
+        
+        // Load saved theme
         document.addEventListener('DOMContentLoaded', function() {
             const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
+            toggleTheme(savedTheme);
         });
+        
+        // Load Attendance for Selected Date
+        function loadAttendance() {
+            const selectedDate = document.getElementById('attendance_date').value;
+            if (!selectedDate) {
+                alert('Please select a date first!');
+                return;
+            }
+            
+            // Redirect to attendance page with selected date
+            window.location.href = `/attendance?date=${selectedDate}`;
+        }
+        
+        // Export Attendance Report
+        function exportAttendance() {
+            const selectedDate = document.getElementById('attendance_date').value;
+            window.location.href = `/attendance-report?date=${selectedDate}&export=csv`;
+        }
+        
+        // Send Notifications to Parents
+        function sendNotifications() {
+            const selectedDate = document.getElementById('attendance_date').value;
+            const presentCount = document.getElementById('present-count').textContent;
+            const absentCount = document.getElementById('absent-count').textContent;
+            
+            // Create notification message
+            const message = `Attendance Report for ${selectedDate}:\n\n✅ Present: ${presentCount} students\n❌ Absent: ${absentCount} students\n\nPlease ensure your child attends school regularly.`;
+            
+            // Copy message to clipboard
+            navigator.clipboard.writeText(message).then(() => {
+                // Show success message
+                showNotification('📋 Message copied to clipboard! You can now send it to parents.', 'success');
+            }).catch(err => {
+                console.error('Failed to copy message:', err);
+                showNotification('❌ Failed to copy message. Please copy manually.', 'error');
+            });
+        }
+        
+        // Show notification function
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 300px;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .attendance-stats .stat-card {
+                transition: all 0.3s ease;
+            }
+            
+            .attendance-stats .stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            }
+            
+            .btn:hover {
+                transform: translateY(-1px);
+                transition: all 0.2s ease;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
