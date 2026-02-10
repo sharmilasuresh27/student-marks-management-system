@@ -2,6 +2,16 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 from datetime import datetime
 import random
+from functools import wraps
+import os
+
+# External Features Integration
+try:
+    from setup_external_features import integrate_all_features
+    EXTERNAL_FEATURES_AVAILABLE = True
+except ImportError:
+    EXTERNAL_FEATURES_AVAILABLE = False
+    print("⚠️  External features not available. Run: pip install -r requirements.txt")
 
 app = Flask(__name__)
 app.secret_key = 'school_management_2024_secure_key'
@@ -1458,4 +1468,9 @@ def get_absent_students(conn, teacher_class, date_str):
     """, (teacher_class, date_str)).fetchall()
 
 if __name__ == "__main__":
+    # Integrate external features if available
+    if EXTERNAL_FEATURES_AVAILABLE:
+        features = integrate_all_features(app)
+        print("🚀 External features loaded successfully!")
+    
     app.run(debug=True)
